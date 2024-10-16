@@ -1,4 +1,4 @@
-import telebot;
+import telebot
 import google.generativeai as genai
 import os
 from PIL import Image
@@ -6,165 +6,131 @@ import requests
 from io import BytesIO
 from pptx import Presentation
 import mimetypes
+from flask import Flask, request
 
+app = Flask(__name__)
 
-apiKey = os.getenv("TELEGRAM_TOKEN")
+# Инициализация бота
+API_TOKEN = "7429366923:AAHGpTLn2wjz7S1jr01ttdj-_Vmz00ma3l8"
+bot = telebot.TeleBot(API_TOKEN)
+
+# Генеративный AI
+apiKey = "AIzaSyCrj3saz9DtSmuesXjHKLR7HIAxRJD3RrY"
 genai.configure(api_key=apiKey)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-def presentationToText(pathFile,message):
-    try:
+@app.route('/setup_webhook', methods=["GET", "POST"])
+def setup_webhook():
+    bot.remove_webhook()  # Удаляем старый вебхук
+    bot.set_webhook("webhook")  # Устанавливаем новый вебхук
+    return "Webhook setup"
 
-        prs = Presentation(pathFile)
+@app.route('/webhook', methods=["POST"])
+def webhook():
+    json_str = request.get_data(as_text=True)  # Получаем данные от Telegram
+    update = telebot.types.Update.de_json(json_str)  # Конвертируем в формат Update
+    bot.process_new_updates([update])  # Обрабатываем обновления
+    return "OK"
+
+def presentation_to_text(path_file):
+    try:
+        prs = Presentation(path_file)
         text = []
         for slide in prs.slides:
             for shape in slide.shapes:
-                if hasattr(shape,"text"):
+                if hasattr(shape, "text"):
                     text.append(shape.text)
         return "\n".join(text)
     except Exception:
-        bot.send_message(message.from_user.id,"Пожалуйста, отправьте презентацию повторно.")
+        return "Ошибка при извлечении текста из презентации."
 
-
-
-bot = telebot.TeleBot("7429366923:AAHGpTLn2wjz7S1jr01ttdj-_Vmz00ma3l8")
-
-@bot.message_handler(content_types=["text","document"])
+@bot.message_handler(content_types=["text", "document"])
 def get_text_messages(message):
     if message.text == "Привет":
-        bot.send_message(message.from_user.id,"Привет чем могу помочь")
-    elif message.text == "Как дела" or message.text == "Как дела?":
-        bot.send_message(message.from_user.id,"У меня все отлично,как у тебя?")
-
+        bot.send_message(message.from_user.id, "Привет чем могу помочь")
+    elif message.text in ["Как дела", "Как дела?"]:
+        bot.send_message(message.from_user.id, "У меня все отлично, как у тебя?")
     elif message.text == "/help":
-        bot.send_message(message.from_user.id,"Доступные команды: /help  /info /image /pdf  /present")
-
+        bot.send_message(message.from_user.id, "Доступные команды: /help, /info, /image, /pdf, /present")
     elif message.text == "/image":
-            bot.send_message(message.from_user.id,"В этой функции бот получает ссылку на изображение, загружает его и превращает визуальный образ в изящное текстовое описание, создавая словесную картину, понятную пользователю.")
-            
-            bot.reply_to(message,"Отправьте ссылку на изображение")
-            bot.register_next_step_handler(message,get_url)
-
-
-
-
+        bot.send_message(message.from_user.id, "Отправьте ссылку на изображение.")
+        bot.register_next_step_handler(message, get_url)
     elif message.text == "/info":
-        bot.send_message(message.from_user.id,"Йоу-йоу, я тут, чтобы помочь, побазарить или просто быть твоим цифровым бро! 🫡 Не стесняйся спросить хоть что — инфа, советы, или даже если надо просто поплакаться в виртуальное плечо 😎. Я всегда на связи, без перерывов на кофе и драм! Давай дружить — обещаю не писать «кек» слишком часто... ну, может, чуть-чуть 👀.")
-    
+        bot.send_message(message.from_user.id, "Я тут, чтобы помочь! 🫡 Не стесняйся спрашивать.")
     elif message.text == "/present":
-        bot.send_message(message.from_user.id,"Отправьте презентацию")
-        bot.register_next_step_handler(message,present_handler)
-
+        bot.send_message(message.from_user.id, "Отправьте презентацию.")
+        bot.register_next_step_handler(message, present_handler)
     elif message.text == "/pdf":
-        bot.send_message(message.from_user.id,"Отправьте пдф файл")
-        bot.register_next_step_handler(message,pdf_handler)
-
-
+        bot.send_message(message.from_user.id, "Отправьте PDF файл.")
+        bot.register_next_step_handler(message, pdf_handler)
     else:
-        
         try:
             response = model.generate_content(message.text)
-            responseText = response.text
-            replacedText = responseText.replace("*","")
-            bot.send_message(message.from_user.id,replacedText)
+            bot.send_message(message.from_user.id, response.text.replace("*", ""))
         except Exception as e:
-            bot.send_message(message.from_user.id,f"Пришлите текст:{e}")
-
-    
+            bot.send_message(message.from_user.id, f"Ошибка: {e}")
 
 def get_url(message):
     url = message.text
-    if message.text == "/stop":
-        bot.reply_to(message,"Вы приостановили функцию")
-        bot.register_next_step_handler(message,get_text_messages)
-    else:
-        try:
-            responseUrl = requests.get(url)
-            pictureDescribe = Image.open(BytesIO(responseUrl.content))
-            responseChat = model.generate_content(["Опиши эту картинку на русском",pictureDescribe])
-            bot.send_message(message.from_user.id,responseChat.text)
+    if url == "/stop":
+        bot.reply_to(message, "Вы приостановили функцию.")
+        bot.register_next_step_handler(message, get_text_messages)
+        return
 
-        except Exception as e:
-            bot.send_message(message.from_user.id,f"Не правильный url или данные,попробуйте ещё раз {e}// Напишите /stop чтобы приостановить данную функцию")
-            bot.register_next_step_handler(message,get_url)
+    try:
+        response_url = requests.get(url)
+        picture_describe = Image.open(BytesIO(response_url.content))
+        response_chat = model.generate_content(["Опиши эту картинку на русском", picture_describe])
+        bot.send_message(message.from_user.id, response_chat.text)
+    except Exception as e:
+        bot.send_message(message.from_user.id, f"Ошибка: Неправильный URL или данные. Попробуйте снова. {e}")
+        bot.register_next_step_handler(message, get_url)
 
-
-
-@bot.message_handler(content_types=["text","document"])
 def present_handler(message):
-        if message.text == "/stop":
-            bot.reply_to(message,"Вы приостановили функцию")
-            bot.register_next_step_handler(message,get_text_messages)
-        else:
-            try:
-                file_info = bot.get_file(message.document.file_id)
-            except Exception:
-                bot.reply_to(message,"Отправленный документ не является презентацией,попробуйте ещё раз")
-                bot.register_next_step_handler(message,present_handler)
-                return
+    if message.text == "/stop":
+        bot.reply_to(message, "Вы приостановили функцию.")
+        bot.register_next_step_handler(message, get_text_messages)
+        return
 
-            try:
-                dowloaded_file = bot.download_file(file_info.file_path)
-            except Exception as e:
-                bot.reply_to(message,e)
-                return
-            try:
+    try:
+        file_info = bot.get_file(message.document.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-                file_name = message.document.file_name
-                with open(file_name,"wb") as new_file:
-                    new_file.write(dowloaded_file)
+        file_name = message.document.file_name
+        with open(file_name, "wb") as new_file:
+            new_file.write(downloaded_file)
 
-                pdftoText = presentationToText(file_name,message.from_user.id)
-                response = model.generate_content(["Опиши это кратко но подробно желательно с примерами",pdftoText])
-                responseText = response.text.replace("*","")
-                bot.send_message(message.from_user.id,responseText)
-            except AttributeError:
-                bot.send_message(message.from_user.id,"Пришлите документ в виде презентации")
-                bot.register_next_step_handler(message,present_handler)
-
-            except Exception as e:
-                bot.reply_to(message,e)
-            
+        pdfto_text = presentation_to_text(file_name)
+        response = model.generate_content(["Опиши это кратко, но подробно, желательно с примерами", pdfto_text])
+        bot.send_message(message.from_user.id, response.text.replace("*", ""))
+    except Exception as e:
+        bot.send_message(message.from_user.id, f"Ошибка: {e}")
 
 def pdf_handler(message):
     if message.text == "/stop":
-        bot.reply_to(message,"Вы приостановили функцию")
-        bot.register_next_step_handler(message,get_text_messages)
-    else:
-        try:
-            pdf_info = bot.get_file(message.document.file_id)
-        except Exception as e:
-            bot.reply_to(message,"Отправленный документ не является пдф файлом")
-            bot.register_next_step_handler(message,pdf_handler)
-            return
-        try:
-            dowloaded_pdf = bot.download_file(pdf_info.file_path)
-            pdf_name = message.document.file_name
-            with open(pdf_name,"wb") as new_pdf:
-                new_pdf.write(dowloaded_pdf)
+        bot.reply_to(message, "Вы приостановили функцию.")
+        bot.register_next_step_handler(message, get_text_messages)
+        return
 
-            mime_type,_ = mimetypes.guess_type(pdf_name)
-            if mime_type is None:
-                mime_type = "application/pdf"
+    try:
+        pdf_info = bot.get_file(message.document.file_id)
+        downloaded_pdf = bot.download_file(pdf_info.file_path)
+        pdf_name = message.document.file_name
 
+        with open(pdf_name, "wb") as new_pdf:
+            new_pdf.write(downloaded_pdf)
 
+        mime_type, _ = mimetypes.guess_type(pdf_name)
+        if mime_type is None:
+            mime_type = "application/pdf"
 
-            with open(pdf_name,"rb") as pdf_file:
-                sample_pdf = genai.upload_file(pdf_file,mime_type=mime_type)
-        except Exception as e:
-            bot.reply_to(message,e)
-            return
-        try:
+        with open(pdf_name, "rb") as pdf_file:
+            sample_pdf = genai.upload_file(pdf_file, mime_type=mime_type)
 
-            response = model.generate_content(["Опиши это кратко но подробно желательно с примерами",sample_pdf])
-            responseText = response.text.replace("*","")
-            bot.send_message(message.from_user.id,responseText)
-        except Exception as e:
-            bot.reply_to(message,f"Произошла ошибка, не поддерживаемый формат {e}")
-            bot.register_next_step_handler(message,pdf_handler)
+        response = model.generate_content(["Опиши это кратко, но подробно, желательно с примерами", sample_pdf])
+        bot.send_message(message.from_user.id, response.text.replace("*", ""))
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка: {e}")
 
-        
-
-
-bot.polling(none_stop=True,interval=0)
-
+if __name__ == "__main__":
+    bot.polling(none_stop=True)
