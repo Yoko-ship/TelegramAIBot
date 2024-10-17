@@ -22,7 +22,7 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 @app.route("/setup_webhook",methods=["GET","POST"])
 def setup_webhook():
     bot.remove_webhook()
-    bot.set_webhook("https://telegramaibot-capf.onrender.com/webhook")
+    bot.set_webhook("https://telegramaibot-q9tc.onrender.com/webhook")
     return "Webhook setup"
 
 @app.route("/webhook",methods=["POST"])
