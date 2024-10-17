@@ -6,7 +6,9 @@ import requests
 from io import BytesIO
 from pptx import Presentation
 import mimetypes
+from flask import Flask,request
 
+app = Flask(__name__)
 
 
 API_TOKEN = "7429366923:AAHGpTLn2wjz7S1jr01ttdj-_Vmz00ma3l8"
@@ -16,6 +18,19 @@ bot = telebot.TeleBot(API_TOKEN)
 apiKey = "AIzaSyCrj3saz9DtSmuesXjHKLR7HIAxRJD3RrY"
 genai.configure(api_key=apiKey)
 model = genai.GenerativeModel("gemini-1.5-flash")
+
+@app.route("/setup_webhook",methods=["GET","POST"])
+def setup_webhook():
+    bot.remove_webhook()
+    bot.set_webhook("")
+    return "Webhook setup"
+
+@app.route("/webhook",methods=["POST"])
+def webhook():
+    json_str = request.get_data(as_text=True)
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "Ok"
 
 def presentation_to_text(path_file):
     try:
