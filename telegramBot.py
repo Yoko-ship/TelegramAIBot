@@ -22,15 +22,19 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 @app.route("/setup_webhook",methods=["GET","POST"])
 def setup_webhook():
     bot.remove_webhook()
-    bot.set_webhook("https://telegramaibot-q9tc.onrender.com/webhook")
+    bot.set_webhook("https://telegramaibot-ficc.onrender.com/webhook")
     return "Webhook setup"
 
 @app.route("/webhook",methods=["POST"])
 def webhook():
-    json_str = request.get_data(as_text=True)
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "Ok"
+    try:
+
+        json_str = request.get_data(as_text=True)
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return "Ok"
+    except Exception as e:
+         print(f"Ошибка обработки вебхука: {e}")
 
 def presentation_to_text(path_file):
     try:
