@@ -21,7 +21,7 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 
 @app.route("/setup_webhook",methods=["GET","POST"])
 def setup_webhook():
-    webhook_url = "/webhook"
+    webhook_url = "https://telegramaibot-9e9s.onrender.com/webhook"
     success = bot.set_webhook(url=webhook_url)
     if success:
         return "Webhook установлен", 200
