@@ -39,6 +39,11 @@ def webhook():
     except Exception as e:
          print(f"Ошибка обработки вебхука: {e}")
 
+
+@app.route("/",methods=["GET"])
+def home():
+    return "Сервер работает успешно",200
+
 def presentation_to_text(path_file):
     try:
         prs = Presentation(path_file)
@@ -140,7 +145,6 @@ def pdf_handler(message):
         bot.reply_to(message, f"Ошибка: {e}")
 
 if __name__ == "__main__":
-    bot.polling(non_stop=True)
-    print(f"Starting Flask on port 5000...")
+    print(f"Starting Flask on port {port}...")
     port = int(os.getenv("PORT",5000))
     app.run(host='0.0.0.0', port=port)
