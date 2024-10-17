@@ -145,6 +145,6 @@ def pdf_handler(message):
         bot.reply_to(message, f"Ошибка: {e}")
 
 if __name__ == "__main__":
-    print(f"Starting Flask on port {port}...")
     port = int(os.getenv("PORT",5000))
+    print(f"Starting Flask on port {port}...")
     app.run(host='0.0.0.0', port=port)
