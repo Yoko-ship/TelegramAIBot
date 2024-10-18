@@ -140,7 +140,7 @@ def pdf_handler(message):
             sample_pdf = genai.upload_file(pdf_file, mime_type=mime_type)
 
         response = model.generate_content(["Опиши это кратко, но подробно, желательно с примерами", sample_pdf])
-        bot.send_message(message.from_user.id, response.text.replace("*", ""))
+        bot.send_message(message.from_user.id, response.text.replace("*", "")[:4096])
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {e}")
 
