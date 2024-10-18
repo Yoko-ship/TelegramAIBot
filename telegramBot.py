@@ -78,7 +78,7 @@ def get_text_messages(message):
     else:
         try:
             response = model.generate_content(message.text)
-            bot.send_message(message.from_user.id, response.text.replace("*", ""))
+            bot.send_message(message.from_user.id, response.text.replace("*", "")[:4000])
         except Exception as e:
             bot.send_message(message.from_user.id, f"Ошибка: {e}")
 
@@ -114,7 +114,7 @@ def present_handler(message):
 
         pdfto_text = presentation_to_text(file_name)
         response = model.generate_content(["Опиши это кратко, но подробно, желательно с примерами", pdfto_text])
-        bot.send_message(message.from_user.id, response.text.replace("*", ""))
+        bot.send_message(message.from_user.id, response.text.replace("*", "")[:4096])
     except Exception as e:
         bot.send_message(message.from_user.id, f"Ошибка: {e}")
 
