@@ -18,6 +18,11 @@ bot = telebot.TeleBot(API_TOKEN)
 apiKey = "AIzaSyCrj3saz9DtSmuesXjHKLR7HIAxRJD3RrY"
 genai.configure(api_key=apiKey)
 model = genai.GenerativeModel("gemini-1.5-flash")
+history = [
+    {"role":"user","parts":"Здарова"},
+    {"role":"model","parts":"Привет!"}
+]
+
 
 @app.route("/setup_webhook",methods=["GET","POST"])
 def setup_webhook():
@@ -77,7 +82,11 @@ def get_text_messages(message):
         bot.register_next_step_handler(message, pdf_handler)
     else:
         try:
-            response = model.generate_content(message.text)
+            history.append({"role":"user","parts":message.text})
+
+            chat = model.start_chat(history=history)
+            response = chat.send_message(message.text)
+            history.append({"role":"model","parts":response.text})
             bot.send_message(message.from_user.id, response.text.replace("*", "")[:4000])
         except Exception as e:
             bot.send_message(message.from_user.id, f"Ошибка: {e}")
